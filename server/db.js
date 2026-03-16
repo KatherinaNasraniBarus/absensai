@@ -1,0 +1,78 @@
+const mysql = require('mysql2/promise');
+require('dotenv').config();
+
+// Default configuration for local development
+const dbConfig = {
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME || 'absenbpjs_db',
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
+};
+
+console.log('Connecting to MySQL with config:', {
+  host: dbConfig.host,
+  user: dbConfig.user,
+  database: dbConfig.database,
+});
+
+const pool = mysql.createPool(dbConfig);
+
+// Initialize the database table if it doesn't exist
+async function initDB() {
+  try {
+    const connection = await pool.getConnection();
+    
+    // Create users table for storing biometrics
+    // face_descriptor uses MEDIUMTEXT because the float array string is quite long
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        nim VARCHAR(50) NOT NULL UNIQUE,
+        face_descriptor MEDIUMTEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    
+    // Create attendance table for recording check-ins, check-outs, and photos
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS attendance (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        nim VARCHAR(50) NOT NULL,
+        type ENUM('in', 'out', 'meet-in', 'meet-out') NOT NULL,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        latitude DECIMAL(10, 8),
+        longitude DECIMAL(11, 8),
+        photo_base64 MEDIUMTEXT,
+        FOREIGN KEY (nim) REFERENCES users(nim) ON DELETE CASCADE
+      )
+    `);
+
+    // Alter table to add the new enums safely if the table already existed with only 'in', 'out'
+    try {
+       await connection.query(`
+         ALTER TABLE attendance MODIFY COLUMN type ENUM('in', 'out', 'meet-in', 'meet-out') NOT NULL;
+       `);
+    } catch(alterErr) {
+       console.log("Note: Could not alter attendance enum, it may already be correct or table does not exist yet.");
+    }
+
+    console.log('✅ Database initialized: users and attendance tables are ready.');
+    connection.release();
+  } catch (err) {
+    if (err.code === 'ER_BAD_DB_ERROR') {
+      console.error('❌ Error: Database does not exist.');
+      console.error('Please create the database using the following command in your MySQL terminal/phpMyAdmin:');
+      console.error(`CREATE DATABASE ${dbConfig.database};`);
+    } else {
+      console.error('❌ Error initializing database:', err);
+    }
+  }
+}
+
+initDB();
+
+module.exports = pool;

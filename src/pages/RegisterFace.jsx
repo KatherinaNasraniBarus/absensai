@@ -93,32 +93,43 @@ export default function RegisterFace() {
   };
 
   return (
-    <div className="animate-fade-in flex-col items-center max-w-3xl mx-auto gap-6 w-full">
-      <div className="text-center w-full">
-        <h1 className="text-3xl font-bold mb-2">Registrasi Wajah & Identitas</h1>
-        <p className="text-secondary">Daftarkan NIM dan profil wajah Anda untuk absensi.</p>
+    <div className="animate-fade-in flex-col items-center max-w-4xl mx-auto gap-6 w-full pb-8">
+      <div className="text-center w-full mb-8">
+        <div className="inline-flex items-center justify-center p-4 bg-primary bg-opacity-10 text-primary rounded-full mb-4 shadow-sm">
+           <User size={32} />
+        </div>
+        <h1 className="text-3xl md:text-4xl font-bold mb-3">Registrasi Profil Wajah</h1>
+        <p className="text-secondary max-w-xl mx-auto">Daftarkan NIM dan pindai profil wajah Anda untuk digunakan pada sistem presensi biometrik harian.</p>
       </div>
 
-      <div className="glass-panel p-6 w-full flex-col items-center gap-4">
+      <div className="glass-panel p-8 md:p-10 w-full max-w-2xl mx-auto flex-col items-center gap-6 shadow-md border-t-4" style={{ borderTopColor: 'var(--primary)' }}>
         
         {step === 0 && (
-          <div className="w-full max-w-md flex-col gap-4 py-8">
+          <div className="w-full flex-col gap-6 py-4">
+            <div className="text-center mb-2">
+               <h2 className="text-xl font-bold">Mulai Pendaftaran</h2>
+               <p className="text-sm text-secondary">Masukkan Nomor Induk Mahasiswa Anda</p>
+            </div>
             <div className="input-group">
-              <label className="input-label">Nomor Induk Mahasiswa (NIM)</label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-tertiary" size={18} />
+              <label className="input-label font-bold text-slate-700">Nomor Induk Mahasiswa (NIM)</label>
+              <div className="relative group">
+                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">
+                  <User size={20} />
+                </div>
                 <input 
                   type="text" 
-                  className="input-field pl-10" 
-                  placeholder="Masukkan NIM Anda"
+                  className="input-field pl-11 py-3 text-lg font-medium shadow-inner" 
+                  placeholder="Misal: 123456789"
                   value={nim}
                   onChange={(e) => setNim(e.target.value)}
+                  style={{ background: 'var(--bg-color)' }}
                 />
               </div>
             </div>
-            {errorMsg && <div className="text-sm text-error">{errorMsg}</div>}
-            <button className="btn btn-primary w-full mt-4" onClick={handleStartRegistration}>
-              Lanjut ke Verifikasi Wajah <ArrowRight size={18} />
+            {errorMsg && <div className="p-3 text-sm text-error bg-error-bg rounded-lg border border-red-200 flex items-center gap-2"><AlertTriangle size={16}/> {errorMsg}</div>}
+            
+            <button className="btn btn-primary w-full py-4 text-lg mt-2 shadow-md hover:shadow-lg" onClick={handleStartRegistration}>
+              Lanjut ke Scan Kamera <ArrowRight size={20} />
             </button>
           </div>
         )}

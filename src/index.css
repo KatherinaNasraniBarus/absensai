@@ -2,18 +2,20 @@
 
 :root {
   /* Brand Colors - BPJS style but modern (Teal/Green) */
-  --primary: #00875a; /* Deep Emerald */
-  --primary-light: #00a870;
-  --primary-dark: #006644;
-  --secondary: #005a87; /* BPJS Blue context */
-  --accent: #ffb703;
+  --primary: #059669; /* Slightly brighter modern Emerald */
+  --primary-light: #10b981;
+  --primary-dark: #047857;
+  --primary-glow: rgba(5, 150, 105, 0.25);
+  
+  --secondary: #0f766e; /* Cool teal supporting color */
+  --accent: #fbbf24;
 
   /* Neutrals */
   --bg-color: #f8fafc;
   --surface: #ffffff;
   --surface-hover: #f1f5f9;
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
   --text-tertiary: #94a3b8;
   --border-color: #e2e8f0;
 
@@ -58,7 +60,7 @@
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-glow: 0 0 15px rgba(0, 135, 90, 0.3);
+  --shadow-glow: 0 0 20px var(--primary-glow);
 
   --transition-fast: 0.15s ease-in-out;
   --transition-normal: 0.3s ease-in-out;
@@ -82,8 +84,8 @@ body {
   min-height: 100vh;
   /* Premium subtle background gradient */
   background-image: 
-    radial-gradient(at 0% 0%, hsla(168, 100%, 86%, 0.4) 0, transparent 50%),
-    radial-gradient(at 100% 0%, hsla(200, 100%, 85%, 0.3) 0, transparent 50%);
+    radial-gradient(ellipse at top left, rgba(16, 185, 129, 0.1) 0%, transparent 40%),
+    radial-gradient(ellipse at bottom right, rgba(15, 118, 110, 0.08) 0%, transparent 40%);
   background-attachment: fixed;
 }
 
@@ -135,12 +137,18 @@ button {
 
 /* Glassmorphism utility */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
   box-shadow: var(--shadow-md);
   border-radius: var(--radius-xl);
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+.glass-panel:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
 }
 
 /* Typography Utilities */
@@ -202,7 +210,7 @@ button {
 .input-field:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(0, 135, 90, 0.1);
+  box-shadow: 0 0 0 3px var(--primary-glow);
 }
 
 /* Buttons */
@@ -227,7 +235,7 @@ button {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
   color: white;
   box-shadow: var(--shadow-sm);
 }
@@ -260,7 +268,7 @@ button {
 
 .btn-danger:not(:disabled):hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 6px rgba(239, 68, 68, 0.2);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
 
 /* Component: Alert/Status Badge */

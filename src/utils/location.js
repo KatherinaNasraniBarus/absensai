@@ -6,7 +6,7 @@ export const TARGET_COORDINATE = {
   longitude: 98.6654552
 };
 
-export const MAX_RADIUS_METERS = 30;
+export const MAX_RADIUS_METERS = 60;
 
 /**
  * Gets the current user location using the HTML5 Geolocation API.
