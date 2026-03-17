@@ -12,6 +12,14 @@ const dbConfig = {
   queueLimit: 0
 };
 
+// Enable SSL for cloud databases like TiDB or Aiven
+if (process.env.DB_SSL === 'true') {
+  dbConfig.ssl = {
+    minVersion: 'TLSv1.2',
+    rejectUnauthorized: true
+  };
+}
+
 console.log('Connecting to MySQL with config:', {
   host: dbConfig.host,
   user: dbConfig.user,

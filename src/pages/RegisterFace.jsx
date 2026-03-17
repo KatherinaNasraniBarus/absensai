@@ -1,276 +1,324 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Camera, RefreshCw, CheckCircle, AlertTriangle, ArrowRight, User } from 'lucide-react';
+import { Camera, RefreshCw, CheckCircle, AlertTriangle, ArrowRight, User, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { loadFaceModels, extractFaceDescriptorAndAngle, saveUserFaceToDB } from '../utils/face';
+
+const STEPS = [
+  { id: 1, label: 'Hadap Lurus', desc: 'Posisikan wajah lurus ke tengah kamera' },
+  { id: 2, label: 'Liveness Check', desc: 'Tolehkan wajah sedikit ke kiri atau kanan' },
+];
 
 export default function RegisterFace() {
   const videoRef = useRef(null);
   const navigate = useNavigate();
-  
+
   const [nim, setNim] = useState('');
-  const [step, setStep] = useState(0); // 0: Input NIM, 1: Face Center, 2: Face Turn
-  const [status, setStatus] = useState('idle'); // idle, loading_models, waiting, scanning, success, error
+  const [step, setStep] = useState(0);
+  const [status, setStatus] = useState('idle');
   const [errorMsg, setErrorMsg] = useState('');
-  
   const [centerDescriptor, setCenterDescriptor] = useState(null);
 
   useEffect(() => {
     let stream = null;
-
     const initCam = async () => {
-      if (step === 0) return; // Only init camera after NIM is entered
-      
+      if (step === 0) return;
       setStatus('loading_models');
       try {
         await loadFaceModels();
         setStatus('waiting');
-        
         stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
+        if (videoRef.current) videoRef.current.srcObject = stream;
       } catch (err) {
         setStatus('error');
-        setErrorMsg(err.message || 'Gagal mengakses kamera atau memuat model API.');
+        setErrorMsg(err.message || 'Gagal mengakses kamera atau memuat model AI.');
       }
     };
-
     initCam();
-
-    return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-    };
+    return () => { if (stream) stream.getTracks().forEach(t => t.stop()); };
   }, [step]);
 
-  const handleStartRegistration = () => {
+  const handleStart = () => {
     if (!nim || nim.trim().length < 5) {
-      setErrorMsg("NIM tidak valid. Masukkan minimal 5 karakter.");
+      setErrorMsg('NIM tidak valid. Masukkan minimal 5 karakter.');
       return;
     }
     setErrorMsg('');
-    setStep(1); // Move to Face Center capture
+    setStep(1);
   };
 
-  const handleCaptureFace = async () => {
+  const handleCapture = async () => {
     if (status !== 'waiting') return;
     setStatus('scanning');
     setErrorMsg('');
-
     try {
       const { descriptor, angle } = await extractFaceDescriptorAndAngle(videoRef.current);
-      
       if (step === 1) {
-        // Step 1: Face Center
-        // Ideally ratio is close to 1 (e.g. 0.8 to 1.2)
-        if (angle < 0.7 || angle > 1.3) {
-          throw new Error("Wajah tidak menghadap lurus ke depan. Posisikan wajah ke tengah (Angle ratio: " + angle.toFixed(2) + ").");
-        }
+        if (angle < 0.7 || angle > 1.3) throw new Error(`Wajah belum lurus ke depan (ratio: ${angle.toFixed(2)}). Coba lagi.`);
         setCenterDescriptor(descriptor);
         setStep(2);
         setStatus('waiting');
       } else if (step === 2) {
-        // Step 2: Liveness Check (Turn Face)
-        // Ratio either significantly < 1 (turn left) or > 1 (turn right)
-        if (angle > 0.85 && angle < 1.15) {
-          throw new Error("Tolong putar wajah Anda sedikit ke kiri atau ke kanan untuk verifikasi (Angle ratio: " + angle.toFixed(2) + ").");
-        }
-        
-        // Save using the straight-facing descriptor (more reliable for matching later)
+        if (angle > 0.85 && angle < 1.15) throw new Error(`Tolehkan wajah lebih jauh ke kiri atau kanan (ratio: ${angle.toFixed(2)}).`);
         await saveUserFaceToDB(centerDescriptor, nim);
         setStatus('success');
-        setTimeout(() => {
-          navigate('/');
-        }, 2000);
+        setTimeout(() => navigate('/'), 2500);
       }
     } catch (err) {
       setStatus('error');
       setErrorMsg(err.message);
-      // Revert back to waiting after short delay
       setTimeout(() => setStatus('waiting'), 3000);
     }
   };
 
+  const currentStepData = STEPS[step - 1];
+
   return (
-    <div className="animate-fade-in flex-col items-center max-w-4xl mx-auto gap-6 w-full pb-8">
-      <div className="text-center w-full mb-8">
-        <div className="inline-flex items-center justify-center p-4 bg-primary bg-opacity-10 text-primary rounded-full mb-4 shadow-sm">
-           <User size={32} />
+    <div className="animate-fade-in" style={{ maxWidth: '560px', margin: '0 auto' }}>
+
+      {/* Page Header */}
+      <div className="text-center mb-8">
+        <div style={{
+          width: '64px', height: '64px',
+          background: 'linear-gradient(135deg, var(--primary-subtle), var(--success-bg))',
+          borderRadius: 'var(--radius-2xl)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          margin: '0 auto var(--space-4)',
+          border: '1px solid rgba(5,150,105,0.15)',
+        }}>
+          <User size={28} style={{ color: 'var(--primary)' }} />
         </div>
-        <h1 className="text-3xl md:text-4xl font-bold mb-3">Registrasi Profil Wajah</h1>
-        <p className="text-secondary max-w-xl mx-auto">Daftarkan NIM dan pindai profil wajah Anda untuk digunakan pada sistem presensi biometrik harian.</p>
+        <h1 style={{ fontSize: 'var(--fs-3xl)', fontWeight: 800, marginBottom: 'var(--space-2)' }}>
+          Registrasi Wajah
+        </h1>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--fs-sm)', maxWidth: '380px', margin: '0 auto', lineHeight: 1.7 }}>
+          Daftarkan NIM dan pindai wajah untuk digunakan pada sistem presensi biometrik.
+        </p>
       </div>
 
-      <div className="glass-panel p-8 md:p-10 w-full max-w-2xl mx-auto flex-col items-center gap-6 shadow-md border-t-4" style={{ borderTopColor: 'var(--primary)' }}>
-        
-        {step === 0 && (
-          <div className="w-full flex-col gap-6 py-4">
-            <div className="text-center mb-2">
-               <h2 className="text-xl font-bold">Mulai Pendaftaran</h2>
-               <p className="text-sm text-secondary">Masukkan Nomor Induk Mahasiswa Anda</p>
+      <div className="card-elevated" style={{ overflow: 'hidden' }}>
+
+        {/* Progress Bar Header (step > 0) */}
+        {step > 0 && (
+          <div style={{
+            padding: 'var(--space-4) var(--space-6)',
+            borderBottom: '1px solid var(--border-color)',
+            background: 'var(--surface-2)',
+          }}>
+            <div className="flex items-center gap-3">
+              {STEPS.map((s, idx) => {
+                const isActive = step === s.id;
+                const isDone = step > s.id || status === 'success';
+                return (
+                  <React.Fragment key={s.id}>
+                    <div className="flex items-center gap-2">
+                      <div style={{
+                        width: '28px', height: '28px',
+                        borderRadius: '50%',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 'var(--fs-xs)', fontWeight: 700,
+                        flexShrink: 0,
+                        background: isDone ? 'var(--success)' : isActive ? 'var(--primary)' : 'var(--surface)',
+                        color: isDone || isActive ? 'white' : 'var(--text-tertiary)',
+                        border: isDone ? 'none' : isActive ? 'none' : '2px solid var(--border-color)',
+                        transition: 'all 0.2s ease',
+                      }}>
+                        {isDone ? <CheckCircle size={14} /> : s.id}
+                      </div>
+                      <span style={{
+                        fontSize: 'var(--fs-xs)', fontWeight: 600,
+                        color: isDone ? 'var(--success)' : isActive ? 'var(--primary)' : 'var(--text-tertiary)',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {s.label}
+                      </span>
+                    </div>
+                    {idx < STEPS.length - 1 && (
+                      <div style={{
+                        flex: 1, height: '2px',
+                        background: step > s.id ? 'var(--success)' : 'var(--border-color)',
+                        borderRadius: '1px', transition: 'background 0.3s',
+                      }} />
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </div>
-            <div className="input-group">
-              <label className="input-label font-bold text-slate-700">Nomor Induk Mahasiswa (NIM)</label>
-              <div className="relative group">
-                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">
-                  <User size={20} />
-                </div>
-                <input 
-                  type="text" 
-                  className="input-field pl-11 py-3 text-lg font-medium shadow-inner" 
-                  placeholder="Misal: 123456789"
-                  value={nim}
-                  onChange={(e) => setNim(e.target.value)}
-                  style={{ background: 'var(--bg-color)' }}
-                />
-              </div>
-            </div>
-            {errorMsg && <div className="p-3 text-sm text-error bg-error-bg rounded-lg border border-red-200 flex items-center gap-2"><AlertTriangle size={16}/> {errorMsg}</div>}
-            
-            <button className="btn btn-primary w-full py-4 text-lg mt-2 shadow-md hover:shadow-lg" onClick={handleStartRegistration}>
-              Lanjut ke Scan Kamera <ArrowRight size={20} />
-            </button>
           </div>
         )}
 
-        {step > 0 && (
-          <>
-            <div className="flex justify-between w-full max-w-md mb-2 text-sm font-semibold text-secondary">
-              <span className={step === 1 ? 'text-primary' : 'text-success'}>1. Hadap Depan</span>
-              <span className={step === 2 ? 'text-primary' : (status === 'success' ? 'text-success' : '')}>2. Putar Wajah (Liveness)</span>
-            </div>
-            
-            {/* Camera Container */}
-            <div style={{
-              width: '100%',
-              maxWidth: '480px',
-              aspectRatio: '4/3',
-              background: '#1e293b',
-              borderRadius: 'var(--radius-lg)',
-              overflow: 'hidden',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              position: 'relative',
-              boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.5)',
-              margin: '0 auto'
-            }}>
-              {status === 'loading_models' && (
-                <div className="flex-col items-center text-white gap-3 z-20">
-                  <RefreshCw className="animate-pulse" size={32} />
-                  <span>Memuat Model AI...</span>
+        <div style={{ padding: 'var(--space-6)' }}>
+
+          {/* ── Step 0: Input NIM ── */}
+          {step === 0 && (
+            <div>
+              <div className="input-group mb-5">
+                <label className="input-label">Nomor Induk Mahasiswa (NIM)</label>
+                <div className="input-wrapper">
+                  <span className="input-icon"><User size={17} /></span>
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="Contoh: 123456789"
+                    value={nim}
+                    onChange={e => setNim(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleStart()}
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              {errorMsg && (
+                <div className="alert alert-error mb-4">
+                  <AlertTriangle size={16} className="alert-icon" />
+                  <span>{errorMsg}</span>
                 </div>
               )}
-              <video 
-                ref={videoRef}
-                autoPlay 
-                muted 
-                playsInline
-                style={{ 
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%', 
-                  height: '100%', 
-                  objectFit: 'cover',
-                  display: status === 'loading_models' ? 'none' : 'block',
-                  transform: 'scaleX(-1)' // mirror for webcam
-                }}
-              />
 
-              {/* Head Outline Guide Overlay - Black Outline with White Border */}
-              {status !== 'loading_models' && (
+              <button className="btn btn-primary w-full btn-lg" onClick={handleStart}>
+                Lanjut ke Scan Wajah
+                <ArrowRight size={18} />
+              </button>
+
+              <div style={{
+                marginTop: 'var(--space-5)',
+                padding: 'var(--space-4)',
+                background: 'var(--primary-subtle)',
+                borderRadius: 'var(--radius-lg)',
+                border: '1px solid rgba(5,150,105,0.15)',
+              }}>
+                <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--primary-dark)', fontWeight: 600, marginBottom: 'var(--space-2)' }}>
+                  ℹ️ Petunjuk Registrasi
+                </p>
+                <ul style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-secondary)', lineHeight: 1.8, paddingLeft: 'var(--space-4)' }}>
+                  <li>Pastikan ruangan cukup terang</li>
+                  <li>Lepaskan kacamata jika memungkinkan</li>
+                  <li>Hadap lurus ke kamera saat pemotretan pertama</li>
+                  <li>Tolehkan wajah ke kiri/kanan untuk verifikasi liveness</li>
+                </ul>
+              </div>
+            </div>
+          )}
+
+          {/* ── Step 1 & 2: Camera ── */}
+          {step > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+
+              {/* Current step info */}
+              <div style={{
+                padding: 'var(--space-3) var(--space-4)',
+                background: 'var(--surface-2)',
+                borderRadius: 'var(--radius-lg)',
+                border: '1px solid var(--border-color)',
+                display: 'flex', alignItems: 'center', gap: 'var(--space-3)',
+              }}>
                 <div style={{
-                  position: 'absolute',
-                  top: 0, left: 0, right: 0, bottom: 0,
-                  pointerEvents: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '2rem',
-                  zIndex: 10
-                }}>
-                  <svg 
-                    viewBox="0 0 200 250" 
-                    style={{ width: '100%', height: '100%', transition: 'opacity 0.3s', opacity: status === 'scanning' ? 0.5 : 1 }}
-                  >
-                    {/* Outer White Border */}
-                    <g 
-                      fill="none" 
-                      stroke={status === 'scanning' ? 'var(--primary)' : 'rgba(255, 255, 255, 0.9)'} 
-                      strokeWidth="5" 
-                      strokeDasharray="8 6"
-                    >
-                      <ellipse cx="100" cy="100" rx="60" ry="80" />
-                      <path d="M 30 250 Q 30 200 100 200 Q 170 200 170 250" />
-                    </g>
-                    
-                    {/* Inner Black Stroke */}
-                    <g 
-                      fill="none" 
-                      stroke={status === 'scanning' ? 'rgba(0,0,0,0.3)' : 'rgba(0, 0, 0, 0.7)'} 
-                      strokeWidth="3" 
-                      strokeDasharray="8 6"
-                    >
-                      <ellipse cx="100" cy="100" rx="60" ry="80" />
-                      <path d="M 30 250 Q 30 200 100 200 Q 170 200 170 250" />
-                    </g>
+                  width: '8px', height: '8px',
+                  borderRadius: '50%',
+                  background: 'var(--primary)',
+                  flexShrink: 0,
+                  animation: 'pulse 2s ease-in-out infinite',
+                  boxShadow: '0 0 0 3px var(--primary-glow)',
+                }} />
+                <div>
+                  <p style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    Langkah {step} dari 2
+                  </p>
+                  <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-secondary)' }}>
+                    {currentStepData?.desc}
+                  </p>
+                </div>
+              </div>
 
-                    {/* Center crosshair small indicator */}
-                    {step === 1 && (
-                      <g strokeWidth="2" style={{ stroke: 'rgba(255, 255, 255, 0.8)' }}>
-                        <line x1="100" y1="90" x2="100" y2="110" />
-                        <line x1="90" y1="100" x2="110" y2="100" />
+              {/* Camera */}
+              <div className="camera-viewport">
+                {status === 'loading_models' && (
+                  <div style={{ color: 'rgba(255,255,255,0.7)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-3)', zIndex: 20 }}>
+                    <RefreshCw size={28} style={{ animation: 'spin 1s linear infinite' }} />
+                    <span style={{ fontSize: 'var(--fs-sm)' }}>Memuat Model AI...</span>
+                  </div>
+                )}
+
+                <video ref={videoRef} autoPlay muted playsInline className="camera-video"
+                  style={{ display: status === 'loading_models' ? 'none' : 'block' }}
+                />
+
+                {/* Head guide overlay */}
+                {status !== 'loading_models' && (
+                  <div className="camera-overlay">
+                    <svg viewBox="0 0 200 250" style={{ width: '100%', height: '100%', opacity: status === 'scanning' ? 0.5 : 1, transition: 'opacity 0.3s' }}>
+                      <g fill="none" stroke={status === 'scanning' ? 'var(--primary)' : 'rgba(255,255,255,0.85)'} strokeWidth="4" strokeDasharray="10 7">
+                        <ellipse cx="100" cy="100" rx="60" ry="78" />
+                        <path d="M 32 250 Q 32 200 100 200 Q 168 200 168 250" />
                       </g>
-                    )}
-                  </svg>
+                      <g fill="none" stroke="rgba(0,0,0,0.5)" strokeWidth="2" strokeDasharray="10 7">
+                        <ellipse cx="100" cy="100" rx="60" ry="78" />
+                        <path d="M 32 250 Q 32 200 100 200 Q 168 200 168 250" />
+                      </g>
+                      {step === 1 && (
+                        <g stroke="rgba(255,255,255,0.7)" strokeWidth="2">
+                          <line x1="100" y1="92" x2="100" y2="108" />
+                          <line x1="92" y1="100" x2="108" y2="100" />
+                        </g>
+                      )}
+                    </svg>
+                  </div>
+                )}
+
+                {/* Scanning border */}
+                {status === 'scanning' && <div className="camera-scanning-border" />}
+
+                {/* Toast */}
+                {status !== 'loading_models' && (
+                  <div className="camera-toast">
+                    {status === 'scanning'
+                      ? <><RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> Memindai wajah...</>
+                      : step === 1
+                        ? '👤 Posisikan wajah lurus ke tengah'
+                        : '↔ Tolehkan ke kiri atau kanan'
+                    }
+                  </div>
+                )}
+              </div>
+
+              {/* Status & Error */}
+              {errorMsg && status === 'error' && (
+                <div className="alert alert-error">
+                  <AlertTriangle size={16} className="alert-icon" />
+                  <span>{errorMsg}</span>
                 </div>
               )}
-              
-              {/* Guidance Overlays based on Step */}
-              {step === 1 && status !== 'loading_models' && (
-                 <div style={{ position: 'absolute', left: 0, right: 0, bottom: '1rem', textAlign: 'center', pointerEvents: 'none', zIndex: 10 }}>
-                    <span style={{ background: 'rgba(0,0,0,0.6)', color: 'white', padding: '0.5rem 1rem', borderRadius: '9999px', fontSize: '0.875rem', fontWeight: 500, backdropFilter: 'blur(4px)', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-                      Posisikan Wajah Lurus ke Tengah
-                    </span>
-                 </div>
+              {status === 'success' && (
+                <div className="alert alert-success">
+                  <CheckCircle size={16} className="alert-icon" />
+                  <div>
+                    <p className="alert-title">Registrasi Berhasil!</p>
+                    <p className="alert-body">Mengalihkan ke halaman dashboard...</p>
+                  </div>
+                </div>
               )}
-              {step === 2 && status !== 'loading_models' && (
-                 <div style={{ position: 'absolute', left: 0, right: 0, bottom: '1rem', textAlign: 'center', pointerEvents: 'none', zIndex: 10 }}>
-                    <span style={{ background: 'rgba(0,0,0,0.6)', color: 'white', padding: '0.5rem 1rem', borderRadius: '9999px', fontSize: '0.875rem', fontWeight: 500, backdropFilter: 'blur(4px)', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-                      Silakan Menoleh Sedikit (Kiri/Kanan)
-                    </span>
-                 </div>
-              )}
-            </div>
 
-            {/* Status indicator */}
-            <div className="flex items-center gap-2 p-3 mt-4 w-full justify-center rounded-md" style={{ background: 'var(--surface-hover)' }}>
-              {status === 'loading_models' && <><RefreshCw size={18} className="animate-pulse text-info" /><span className="text-info font-medium">Persiapan AI System</span></>}
-              {status === 'waiting' && <span className="status-badge info">Menunggu Ambil Gambar</span>}
-              {status === 'scanning' && <><RefreshCw size={18} className="animate-pulse text-warning" /><span className="text-warning font-medium">Memindai Wajah...</span></>}
-              {status === 'success' && <><CheckCircle size={18} className="text-success" /><span className="text-success font-medium">Registrasi Selesai!</span></>}
-              {status === 'error' && <><AlertTriangle size={18} className="text-error" /><span className="text-error font-medium">{errorMsg}</span></>}
-            </div>
-
-            {/* Controls */}
-            <div className="flex gap-4 w-full mt-4 max-w-md">
-              <button 
-                className="btn btn-primary flex-1" 
-                onClick={handleCaptureFace}
+              {/* Capture Button */}
+              <button
+                className="btn btn-primary w-full btn-lg"
+                onClick={handleCapture}
                 disabled={status !== 'waiting'}
               >
                 <Camera size={18} />
                 {step === 1 ? 'Rekam Wajah Hadap Depan' : 'Rekam Liveness (Menoleh)'}
               </button>
-            </div>
 
-            <div className="mt-6 text-sm text-center text-text-tertiary max-w-md">
-              Notes: Sistem menggunakan deteksi profil sudut wajah <i>(yaw ratio)</i> untuk mendeteksi *liveness* dan mencegah foto diam.
+              <p style={{ textAlign: 'center', fontSize: 'var(--fs-xs)', color: 'var(--text-tertiary)' }}>
+                NIM: <strong style={{ color: 'var(--text-secondary)' }}>{nim}</strong>
+                {' '}—{' '}
+                <button onClick={() => { setStep(0); setStatus('idle'); setErrorMsg(''); }}
+                  style={{ color: 'var(--primary)', fontSize: 'var(--fs-xs)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>
+                  Ganti NIM
+                </button>
+              </p>
             </div>
-          </>
-        )}
+          )}
+
+        </div>
       </div>
     </div>
   );
