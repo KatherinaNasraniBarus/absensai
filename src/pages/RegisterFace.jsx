@@ -18,6 +18,16 @@ export default function RegisterFace() {
   const [errorMsg, setErrorMsg] = useState('');
   const [centerDescriptor, setCenterDescriptor] = useState(null);
 
+  // ─── TAMBAHKAN RADAR PENANGKAP NIM DI SINI ───
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const nimDariUrl = params.get("nim");
+    
+    if (nimDariUrl) {
+      setNim(nimDariUrl); // Otomatis mengisi kotak input NIM
+      // setStep(1); // (Opsional) Hapus tanda // di awal baris ini jika Anda ingin langsung melompati halaman input dan otomatis menyalakan kamera
+    }
+  }, []);
   useEffect(() => {
     let stream = null;
     const initCam = async () => {
