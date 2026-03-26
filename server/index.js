@@ -113,11 +113,12 @@ app.get('/api/attendance/today/:nim', async (req, res) => {
   const { nim } = req.params;
 
   try {
-    // Tambahkan 'report' ke dalam SELECT query agar React bisa merender laporannya di riwayat
+    // 🚀 PERBAIKAN ZONA WAKTU: Tambahkan +7 Jam (WIB) pada timestamp dan waktu saat ini (UTC)
     const query = `
       SELECT id, type, timestamp, latitude, longitude, photo_url, report 
       FROM attendance 
-      WHERE nim = ? AND DATE(timestamp) = CURDATE()
+      WHERE nim = ? 
+      AND DATE(DATE_ADD(timestamp, INTERVAL 7 HOUR)) = DATE(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 7 HOUR))
       ORDER BY timestamp ASC
     `;
     

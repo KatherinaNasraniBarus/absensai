@@ -39,7 +39,14 @@ export default function Dashboard() {
           setActiveNim(currentNim);
         }
 
-        const isUserExistInDb = users.some(u => u.nim === currentNim);
+        // SATPAM FINAL: Mengecek nama kolom "descriptor" dari Backend Express
+        // dan memastikan panjang array-nya lebih dari 0 (tidak kosong []).
+        const isUserExistInDb = users.some(u => 
+          u.nim === currentNim && 
+          u.descriptor && 
+          u.descriptor.length > 0 
+        );
+
         setIsRegistered(isUserExistInDb);
         localStorage.setItem('face_registered', isUserExistInDb ? 'true' : 'false');
         

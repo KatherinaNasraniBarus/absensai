@@ -1,8 +1,10 @@
+
 /**
  * API Service connecting to the Express & MySQL Backend.
  */
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://absensai.vercel.app/api';
+//const API_URL = 'http://localhost:5000/api';
 
 export const MockApi = {
   /**
@@ -39,7 +41,16 @@ export const MockApi = {
    */
   getAllUsers: async () => {
     try {
-      const response = await fetch(`${API_URL}/users`);
+      // 🚀 TAMBAHAN BARU: Memaksa browser tidak menggunakan Cache (Ingatan Lama)
+      // Kita tambahkan parameter waktu (?t=...) dan header Cache-Control
+      const response = await fetch(`${API_URL}/users?t=${new Date().getTime()}`, {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
       
       if (!response.ok) {
         throw new Error('Gagal mengambil data dari server');
@@ -88,7 +99,14 @@ export const MockApi = {
    */
   getTodayAttendance: async (nim) => {
     try {
-      const response = await fetch(`${API_URL}/attendance/today/${nim}`);
+      // 🚀 Sekalian kita amankan riwayat absen dari cache agar langsung update saat absen
+      const response = await fetch(`${API_URL}/attendance/today/${nim}?t=${new Date().getTime()}`, {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
       
       if (!response.ok) {
         throw new Error('Gagal mengambil data riwayat dari server');
